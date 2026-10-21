@@ -1,0 +1,383 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Moto Solo Lite</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;700&family=Barlow:wght@400;600&display=swap">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.css">
+<style>
+:root{--bg:#eceff1;--ink:#14191e;--mute:#5b6670;--card:#fff;--line:#cfd6db;--sig:#0a4fa3;--rec:#c4261d;--ok:#1b7a3f;
+box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#15191d;--ink:#f1f3f4;--mute:#97a3ac;--card:#1f252a;--line:#333c43;--sig:#f2c200;--rec:#ff5a4d;--ok:#4cc97b}}
+:root[data-theme="dark"]{--bg:#15191d;--ink:#f1f3f4;--mute:#97a3ac;--card:#1f252a;--line:#333c43;--sig:#f2c200;--rec:#ff5a4d;--ok:#4cc97b}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:400 16px/1.4 Barlow,system-ui,sans-serif;min-height:100%}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);background:var(--bg);z-index:10}
+main{max-width:560px;margin:0 auto;padding:12px 16px 88px}
+.top{display:flex;justify-content:space-between;align-items:center;padding:4px 0 10px}
+.top b{font:700 20px 'Barlow Condensed',sans-serif;letter-spacing:.02em}
+button{font:600 16px Barlow,system-ui,sans-serif;color:var(--ink);background:var(--card);border:1.5px solid var(--line);border-radius:10px;padding:12px 16px;min-height:48px}
+button:focus-visible{outline:3px solid var(--sig);outline-offset:2px}
+.speed{text-align:center;padding:18px 0 6px}
+.speed .n{font:700 min(40vw,190px)/0.9 'Barlow Condensed',sans-serif;font-variant-numeric:tabular-nums;color:var(--sig)}
+.speed .u{color:var(--mute);font-size:18px}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:14px 0}
+.cell{background:var(--card);border:1.5px solid var(--line);border-radius:10px;padding:10px 14px}
+.cell span{display:block;color:var(--mute);font-size:14px}
+.cell b{font:700 34px 'Barlow Condensed',sans-serif;font-variant-numeric:tabular-nums}
+.lean{position:relative;height:56px;border:1.5px solid var(--line);border-radius:10px;background:var(--card);overflow:hidden;margin-bottom:10px}
+.lean i{position:absolute;left:50%;top:0;bottom:0;width:4px;margin-left:-2px;background:var(--sig);transform-origin:50% 100%}
+.lean em{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font:700 26px 'Barlow Condensed',sans-serif;font-style:normal;mix-blend-mode:normal;pointer-events:none}
+.lean u{position:absolute;left:50%;top:0;bottom:0;width:1px;background:var(--line)}
+.row{display:flex;gap:10px}.row>*{flex:1}
+#go{width:100%;min-height:64px;font-size:20px;background:var(--ok);border-color:var(--ok);color:#fff}
+#go.on{background:var(--rec);border-color:var(--rec)}
+.status{color:var(--mute);font-size:14px;text-align:center;margin:8px 0}
+nav{position:fixed;left:0;right:0;bottom:0;display:flex;background:var(--bg);border-top:1.5px solid var(--line);padding-bottom:env(safe-area-inset-bottom,0px)}
+nav button{flex:1;border:0;border-radius:0;background:none;min-height:56px}
+nav button[aria-current="true"]{color:var(--sig);box-shadow:inset 0 3px 0 var(--sig)}
+.trip{background:var(--card);border:1.5px solid var(--line);border-radius:10px;padding:12px 14px;margin-bottom:10px}
+.trip h3{margin:0 0 2px;font:700 20px 'Barlow Condensed',sans-serif}
+.trip p{margin:0 0 10px;color:var(--mute)}
+.trip .row button{padding:8px;min-height:44px}
+textarea{width:100%;height:140px;margin-top:10px;font:12px monospace}
+.empty{color:var(--mute);text-align:center;padding:40px 10px}
+[hidden]{display:none!important}
+nav{z-index:20}
+.mapwrap{position:relative}
+.navbar{position:absolute;top:8px;left:8px;right:8px;z-index:5;display:flex;gap:12px;align-items:center;padding:8px 12px;border-radius:10px;background:var(--ink);color:var(--bg)}
+.navbar b{font:700 36px 'Barlow Condensed',sans-serif;white-space:nowrap}
+.navbar span{display:block;font-weight:600;line-height:1.2}
+.navbar small{display:block;opacity:.8;font-size:13px}
+input{font:inherit;color:var(--ink);background:var(--card);border:1.5px solid var(--line);border-radius:10px;padding:10px 12px;min-height:48px;min-width:0;flex:2}
+#res button{display:block;width:100%;text-align:left;margin-top:6px;font-weight:400;font-size:14px}
+#v-dash{display:grid;gap:10px}
+#map{position:relative;z-index:0;height:40vh;min-height:240px;border-radius:10px;border:1.5px solid var(--line);background:var(--card)}
+.mapwrap .row{margin-top:8px}
+.leaflet-control-zoom a{width:40px!important;height:40px!important;line-height:40px!important;font-size:22px!important}
+@media (orientation:landscape){
+ main{max-width:none;padding:8px max(16px,env(safe-area-inset-right)) 72px max(16px,env(safe-area-inset-left))}
+ .top{padding:0 0 6px}
+ #v-dash{grid-template-columns:minmax(260px,42%) 1fr;grid-template-areas:"hd map" "ft map";grid-template-rows:auto 1fr;gap:10px 14px}
+ .hd{grid-area:hd}.ft{grid-area:ft}.mapwrap{grid-area:map;position:sticky;top:0;align-self:start}
+ #map{height:calc(100vh - 250px - env(safe-area-inset-top,0px));min-height:180px}
+ .speed{padding:2px 0}.speed .n{font-size:min(34vh,20vw)}
+ .grid{margin:0 0 10px}
+}
+</head>
+<body>
+<main>
+<div class="top"><b>Moto Solo Lite</b><button id="theme" aria-label="Changer jour ou nuit">Jour / nuit</button></div>
+
+<section id="v-dash">
+<div class="hd">
+  <div class="speed"><div class="n" id="spd">0</div><div class="u">km/h</div></div>
+  <div class="lean" aria-label="Angle d’inclinaison"><u></u><i id="needle"></i><em id="leanv">0°</em></div>
+  <div class="row" style="margin-bottom:10px">
+    <button id="perm">Activer l’inclinaison</button>
+    <button id="cal">Mettre à zéro</button>
+  </div>
+</div>
+<div class="mapwrap">
+  <div class="navbar" id="navbar" hidden><b id="nav-d"></b><div><span id="nav-t"></span><small id="nav-s"></small></div></div>
+  <div id="map" aria-label="Carte OpenStreetMap"></div>
+  <div class="row"><input id="q" type="search" placeholder="Destination (adresse, lieu)" aria-label="Destination"><button id="sch">Chercher</button></div>
+  <div id="res"></div>
+  <div class="row"><button id="follow">Suivi activé</button><button id="voice">Voix activée</button><button id="stopnav" hidden>Arrêter</button></div>
+</div>
+<div class="ft">
+  <div class="grid">
+    <div class="cell"><span>Distance</span><b id="dist">0,0 km</b></div>
+    <div class="cell"><span>Durée</span><b id="dur">00:00</b></div>
+    <div class="cell"><span>Vitesse max</span><b id="max">0 km/h</b></div>
+    <div class="cell"><span>Altitude</span><b id="alt">–</b></div>
+    <div class="cell"><span>Inclinaison max</span><b id="maxlean">0°</b></div>
+    <div class="cell"><span>Force G max</span><b id="maxg">0,0 g</b></div>
+  </div>
+  <button id="go">Démarrer le trajet</button>
+  <div class="status" id="status">Autorise la position quand le navigateur le demande.</div>
+</div>
+</section>
+
+<section id="v-trips" hidden>
+  <div id="list"></div>
+  <textarea id="gpx" hidden readonly></textarea>
+</section>
+</main>
+
+<nav>
+  <button id="t-dash" aria-current="true">Tableau de bord</button>
+  <button id="t-trips" aria-current="false">Trajets</button>
+</nav>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.js"></script>
+<script>
+(function(){
+const $=id=>document.getElementById(id);
+const fmt=(n,d=1)=>n.toFixed(d).replace('.',',');
+const KEY='msl-trips';
+let trips=[];
+try{trips=JSON.parse(localStorage.getItem(KEY)||'[]')}catch(e){trips=[]}
+function save(){try{localStorage.setItem(KEY,JSON.stringify(trips))}catch(e){$('status').textContent='Stockage plein : exporte puis supprime des trajets.'}}
+
+// Thème
+$('theme').onclick=()=>{
+  const r=document.documentElement;
+  const dark=r.dataset.theme?r.dataset.theme==='dark':matchMedia('(prefers-color-scheme:dark)').matches;
+  r.dataset.theme=dark?'light':'dark';
+};
+
+// Onglets
+function tab(t){
+  $('v-dash').hidden=t!=='dash';$('v-trips').hidden=t!=='trips';
+  $('t-dash').setAttribute('aria-current',t==='dash');$('t-trips').setAttribute('aria-current',t==='trips');
+  if(t==='trips')render();
+  if(t==='dash')setTimeout(()=>map&&map.invalidateSize(),60);
+}
+$('t-dash').onclick=()=>tab('dash');$('t-trips').onclick=()=>tab('trips');
+
+// État du trajet
+let rec=false,watch=null,wake=null,timer=null;
+let S={pts:[],dist:0,max:0,t0:0,last:null,lean:0,g:0};
+let cur={kmh:0,lean:0},gamma=0,offset=0;
+
+// Carte OpenStreetMap
+let map=null,me=null,line=null,follow=true,placed=false,shown=false;
+function initMap(){
+  if(!window.L){$('map').innerHTML='<div class="empty">Carte indisponible : connexion requise pour charger Leaflet.</div>';return}
+  map=L.map('map',{zoomControl:false}).setView([20,0],2);L.control.zoom({position:'bottomright'}).addTo(map);
+  L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19,attribution:'&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> · routage <a href="https://project-osrm.org">OSRM</a>'}).addTo(map);
+  line=L.polyline([],{color:'#c4261d',weight:5}).addTo(map);
+  me=L.circleMarker([0,0],{radius:9,color:'#fff',weight:3,fillColor:'#0a4fa3',fillOpacity:1});
+  map.on('dragstart',()=>setFollow(false));
+  const fix=()=>setTimeout(()=>map.invalidateSize(),150);
+  addEventListener('resize',fix);addEventListener('orientationchange',fix);
+}
+function setFollow(v){
+  follow=v;$('follow').textContent=v?'Suivi activé':'Suivi désactivé · recentrer';
+  if(v&&me&&placed)map.panTo(me.getLatLng());
+}
+$('follow').onclick=()=>setFollow(!follow);
+function mapMove(lat,lon){
+  NS.pos=[lat,lon];navUpdate(lat,lon);
+  if(!map)return;
+  const ll=[lat,lon];
+  me.setLatLng(ll);
+  if(!shown){me.addTo(map);shown=true}
+  if(!placed){map.setView(ll,16);placed=true}
+  else if(follow)map.panTo(ll,{animate:true});
+}
+
+// Navigation guidée (Nominatim + OSRM)
+const NS={pos:null,dest:null,steps:[],coords:[],i:0,said:0,last:0,voice:true,dist:1,dur:1};
+let routeLine=null,destMk=null,busy=false;
+const MOD={'left':'à gauche','right':'à droite','slight left':'légèrement à gauche','slight right':'légèrement à droite','sharp left':'franchement à gauche','sharp right':'franchement à droite','straight':'tout droit'};
+const fd=m=>m<1000?Math.max(10,Math.round(m/10)*10)+' m':fmt(m/1000)+' km';
+const loc=s=>[s.maneuver.location[1],s.maneuver.location[0]];
+function instr(s){
+  const m=s.maneuver,mod=MOD[m.modifier]||'',n=s.name?' sur '+s.name:'';
+  if(m.modifier==='uturn')return 'Fais demi-tour'+n;
+  switch(m.type){
+    case 'depart':return 'Démarre'+n;
+    case 'arrive':return 'Tu es arrivé';
+    case 'roundabout':case 'rotary':return 'Au rond-point, prends la sortie '+(m.exit||'')+n;
+    case 'fork':return 'Garde '+(mod||'ta voie')+n;
+    case 'merge':return 'Insère-toi '+mod+n;
+    case 'on ramp':case 'off ramp':return 'Prends la bretelle '+mod+n;
+    case 'turn':case 'end of road':return 'Tourne '+mod+n;
+    default:return 'Continue '+(mod||'tout droit')+n;
+  }
+}
+function say(t){if(!NS.voice||!window.speechSynthesis)return;try{speechSynthesis.cancel();const u=new SpeechSynthesisUtterance(t);u.lang='fr-FR';speechSynthesis.speak(u)}catch(e){}}
+async function search(){
+  const q=$('q').value.trim(),box=$('res');
+  if(!q||busy)return;
+  busy=true;setTimeout(()=>busy=false,1200);
+  box.textContent='Recherche…';
+  try{
+    const j=await(await fetch('https://nominatim.openstreetmap.org/search?format=jsonv2&limit=5&accept-language=fr&q='+encodeURIComponent(q))).json();
+    box.innerHTML='';
+    if(!j.length){box.textContent='Aucun résultat : précise l’adresse ou la ville.';return}
+    j.forEach(p=>{const b=document.createElement('button');b.textContent=p.display_name;b.onclick=()=>{box.innerHTML='';startNav(+p.lat,+p.lon)};box.appendChild(b)});
+  }catch(e){box.textContent='Recherche impossible : vérifie la connexion.'}
+}
+async function startNav(lat,lon){
+  if(!NS.pos){$('status').textContent='Attends la première position GPS avant de lancer un itinéraire.';return}
+  NS.dest=[lat,lon];lock();await fetchRoute(true);
+}
+async function fetchRoute(first){
+  if(!NS.pos||!NS.dest)return;
+  const a=NS.pos,b=NS.dest;
+  try{
+    const j=await(await fetch('https://router.project-osrm.org/route/v1/driving/'+a[1]+','+a[0]+';'+b[1]+','+b[0]+'?overview=full&geometries=geojson&steps=true')).json();
+    if(j.code!=='Ok'||!j.routes.length)throw new Error('none');
+    const rt=j.routes[0];
+    NS.coords=rt.geometry.coordinates.map(c=>[c[1],c[0]]);
+    NS.steps=rt.legs[0].steps;NS.i=0;NS.said=0;NS.dist=rt.distance||1;NS.dur=rt.duration;
+    if(map){
+      if(routeLine)routeLine.setLatLngs(NS.coords);else routeLine=L.polyline(NS.coords,{color:'#2a7de1',weight:6,opacity:.85}).addTo(map);
+      if(destMk)destMk.setLatLng(b);else destMk=L.circleMarker(b,{radius:8,color:'#fff',weight:3,fillColor:'#c4261d',fillOpacity:1}).addTo(map);
+      if(first){setFollow(false);map.fitBounds(routeLine.getBounds(),{padding:[50,50]});setTimeout(()=>{if(NS.dest)setFollow(true)},4000)}
+    }
+    $('navbar').hidden=false;$('stopnav').hidden=false;
+    $('status').textContent='Itinéraire voiture : '+fd(rt.distance)+'.';
+    navUpdate(a[0],a[1]);
+  }catch(e){$('status').textContent='Itinéraire impossible : aucune route trouvée ou service indisponible.'}
+}
+function navUpdate(lat,lon){
+  if(!NS.dest||NS.steps.length<2)return;
+  const p=[lat,lon],n=NS.steps.length;
+  let nx=NS.steps[NS.i+1],d=hav(p,loc(nx));
+  if(d<25){
+    if(NS.i+1>=n-1){stopNav('Tu es arrivé.');say('Tu es arrivé');return}
+    NS.i++;NS.said=0;nx=NS.steps[NS.i+1];d=hav(p,loc(nx));
+  }
+  const t=instr(nx);
+  if(d<350&&NS.said<1){NS.said=1;say('Dans '+fd(d)+', '+t.charAt(0).toLowerCase()+t.slice(1))}
+  if(d<70&&NS.said<2){NS.said=2;say(t)}
+  let rem=d;for(let k=NS.i+1;k<n;k++)rem+=NS.steps[k].distance;
+  const eta=new Date(Date.now()+rem/NS.dist*NS.dur*1000);
+  $('nav-d').textContent=fd(d);$('nav-t').textContent=t;
+  $('nav-s').textContent=fmt(rem/1000)+' km · arrivée '+eta.toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'});
+  let m=1e9;for(const c of NS.coords){const x=hav(p,c);if(x<m)m=x}
+  if(m>100&&Date.now()-NS.last>15000){NS.last=Date.now();say('Recalcul de l’itinéraire');fetchRoute(false)}
+}
+function stopNav(msg){
+  NS.dest=null;NS.steps=[];
+  if(routeLine){routeLine.remove();routeLine=null}
+  if(destMk){destMk.remove();destMk=null}
+  $('navbar').hidden=true;$('stopnav').hidden=true;
+  if(msg)$('status').textContent=msg;
+  try{speechSynthesis.cancel()}catch(e){}
+}
+$('sch').onclick=search;
+$('q').onkeydown=e=>{if(e.key==='Enter')search()};
+$('stopnav').onclick=()=>stopNav('Navigation arrêtée.');
+$('voice').onclick=function(){NS.voice=!NS.voice;this.textContent=NS.voice?'Voix activée':'Voix coupée';if(!NS.voice)try{speechSynthesis.cancel()}catch(e){}};
+
+function hav(a,b){const R=6371000,r=Math.PI/180,dl=(b[0]-a[0])*r,dn=(b[1]-a[1])*r;
+  const x=Math.sin(dl/2)**2+Math.cos(a[0]*r)*Math.cos(b[0]*r)*Math.sin(dn/2)**2;return 2*R*Math.asin(Math.sqrt(x))}
+
+function onPos(p){
+  const c=p.coords;
+  let v=c.speed!=null&&c.speed>=0?c.speed*3.6:0;
+  if(v<2)v=0;
+  cur.kmh=v;$('spd').textContent=Math.round(v);
+  if(c.altitude!=null)$('alt').textContent=Math.round(c.altitude)+' m';
+  $('status').textContent=rec?'Trajet en cours · précision '+Math.round(c.accuracy)+' m':'Position OK · précision '+Math.round(c.accuracy)+' m';
+  if(c.accuracy<=100)mapMove(c.latitude,c.longitude);
+  if(!rec||c.accuracy>50)return;
+  const pt=[c.latitude,c.longitude,c.altitude==null?null:Math.round(c.altitude),p.timestamp];
+  if(S.last){
+    const d=hav(S.last,pt);
+    if(d<3&&v===0)return;
+    if(d>=3)S.dist+=d;
+  }
+  if(!S.last||pt[3]-S.last[3]>=2000){S.pts.push(pt);S.last=pt;if(line)line.addLatLng([pt[0],pt[1]])}
+  if(v>S.max)S.max=v;
+}
+function onErr(e){$('status').textContent=e.code===1?'Position refusée : autorise-la dans les réglages du navigateur.':'Position indisponible ('+e.message+').'}
+
+function startWatch(){
+  if(!navigator.geolocation){$('status').textContent='Ce navigateur ne gère pas la géolocalisation.';return false}
+  if(watch===null)watch=navigator.geolocation.watchPosition(onPos,onErr,{enableHighAccuracy:true,maximumAge:0,timeout:15000});
+  return true;
+}
+
+async function lock(){try{if('wakeLock' in navigator)wake=await navigator.wakeLock.request('screen')}catch(e){}}
+
+function tick(){
+  const s=Math.floor((Date.now()-S.t0)/1000),h=Math.floor(s/3600),m=Math.floor(s%3600/60),sec=s%60;
+  $('dur').textContent=(h?h+':':'')+String(m).padStart(2,'0')+':'+String(sec).padStart(2,'0');
+  $('dist').textContent=fmt(S.dist/1000)+' km';
+  $('max').textContent=Math.round(S.max)+' km/h';
+  $('maxlean').textContent=Math.round(S.lean)+'°';
+  $('maxg').textContent=fmt(S.g)+' g';
+}
+
+$('go').onclick=function(){
+  if(!rec){
+    if(!startWatch())return;
+    S={pts:[],dist:0,max:0,t0:Date.now(),last:null,lean:0,g:0};
+    if(line)line.setLatLngs([]);
+    rec=true;lock();timer=setInterval(tick,1000);tick();
+    this.textContent='Arrêter le trajet';this.classList.add('on');
+  }else{
+    rec=false;clearInterval(timer);tick();
+    if(wake){try{wake.release()}catch(e){}wake=null}
+    this.textContent='Démarrer le trajet';this.classList.remove('on');
+    if(S.pts.length>1){
+      const dur=Math.round((Date.now()-S.t0)/1000);
+      trips.unshift({id:S.t0,start:S.t0,dur:dur,dist:S.dist,max:S.max,lean:S.lean,g:S.g,pts:S.pts.slice(0,6000)});
+      save();$('status').textContent='Trajet enregistré dans l’onglet Trajets.';
+    }else $('status').textContent='Trajet trop court : rien n’a été enregistré.';
+  }
+};
+
+// Inclinaison et force G
+function onOri(e){
+  if(e.gamma==null)return;
+  gamma=e.gamma;
+  const l=Math.max(-60,Math.min(60,gamma-offset));
+  cur.lean=l;
+  $('needle').style.transform='rotate('+l*1.2+'deg)';
+  $('leanv').textContent=Math.abs(Math.round(l))+'°';
+  if(rec&&cur.kmh>10&&Math.abs(l)>S.lean)S.lean=Math.abs(l);
+}
+function onMot(e){
+  const a=e.acceleration;
+  if(!a||a.x==null||!rec)return;
+  const g=Math.hypot(a.x,a.y,a.z)/9.81;
+  if(g>S.g&&g<4)S.g=g;
+}
+async function enableSensors(){
+  try{
+    if(window.DeviceOrientationEvent&&DeviceOrientationEvent.requestPermission){
+      const r=await DeviceOrientationEvent.requestPermission();
+      if(r!=='granted'){$('status').textContent='Capteurs refusés.';return}
+    }
+    addEventListener('deviceorientation',onOri);
+    addEventListener('devicemotion',onMot);
+    $('perm').textContent='Inclinaison active';$('perm').disabled=true;
+    $('status').textContent='Fixe le téléphone sur le guidon, puis appuie sur « Mettre à zéro » à l’arrêt.';
+  }catch(e){$('status').textContent='Capteurs indisponibles sur cet appareil.'}
+}
+$('perm').onclick=enableSensors;
+$('cal').onclick=()=>{offset=gamma;$('status').textContent='Inclinaison remise à zéro.'};
+
+// Trajets
+function gpx(t){
+  const pts=t.pts.map(p=>'<trkpt lat="'+p[0]+'" lon="'+p[1]+'">'+(p[2]!=null?'<ele>'+p[2]+'</ele>':'')+'<time>'+new Date(p[3]).toISOString()+'</time></trkpt>').join('');
+  return '<?xml version="1.0" encoding="UTF-8"?><gpx version="1.1" creator="Moto Solo Lite" xmlns="http://www.topografix.com/GPX/1/1"><trk><name>Trajet '+new Date(t.start).toLocaleString('fr-FR')+'</name><trkseg>'+pts+'</trkseg></trk></gpx>';
+}
+async function share(t){
+  const x=gpx(t),box=$('gpx');
+  try{
+    if(navigator.share){await navigator.share({title:'Trajet moto',text:x});return}
+    await navigator.clipboard.writeText(x);$('status').textContent='GPX copié.';alert('GPX copié dans le presse-papiers.');
+  }catch(e){box.hidden=false;box.value=x;box.focus();box.select()}
+}
+function render(){
+  const L=$('list');L.innerHTML='';$('gpx').hidden=true;
+  if(!trips.length){L.innerHTML='<div class="empty">Aucun trajet pour l’instant. Lance-en un depuis le tableau de bord.</div>';return}
+  trips.forEach((t,i)=>{
+    const d=document.createElement('div');d.className='trip';
+    const m=Math.round(t.dur/60);
+    d.innerHTML='<h3>'+new Date(t.start).toLocaleDateString('fr-FR',{weekday:'long',day:'numeric',month:'long',hour:'2-digit',minute:'2-digit'})+'</h3>'+
+      '<p>'+fmt(t.dist/1000)+' km · '+m+' min · max '+Math.round(t.max)+' km/h · '+Math.round(t.lean)+'° · '+fmt(t.g)+' g</p>'+
+      '<div class="row"><button data-a="x">Exporter GPX</button><button data-a="d">Supprimer</button></div>';
+    d.querySelector('[data-a=x]').onclick=()=>share(t);
+    d.querySelector('[data-a=d]').onclick=()=>{if(confirm('Supprimer ce trajet ?')){trips.splice(i,1);save();render()}};
+    L.appendChild(d);
+  });
+}
+
+// Position dès l’ouverture pour afficher la vitesse
+initMap();
+startWatch();
+})();
+</script>
+</body>
+</html>
