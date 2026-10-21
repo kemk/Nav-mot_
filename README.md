@@ -1,10 +1,10 @@
 # Moto Solo Lite
 
-Application web libre (AGPL-3.0) et minimaliste pour la moto, pensée pour le **téléphone uniquement** (portrait et paysage) : tableau de bord GPS, carte OpenStreetMap, navigation guidée et enregistrement de trajets. Elle tient dans **un seul fichier** (`index.html`), sans compte, sans serveur et sans OBD.
+Application web libre (AGPL-3.0) et minimaliste pour la moto, pensée pour le **téléphone uniquement** (portrait et paysage) : tableau de bord GPS, carte OpenStreetMap, navigation guidée et enregistrement de trajets. Elle se compose d'une seule page (`index.html`) et de quelques fichiers d'installation, sans compte, sans serveur et sans OBD.
 
 > Projet personnel et indépendant. Il n'est lié ni à MOTO-HUB ADV-SOLO ni à ses auteurs.
 
-Version actuelle : **5** (indiquée en bas du panneau « Plus »).
+Version actuelle : **6** (indiquée en bas du panneau « Plus »).
 
 ## Fonctionnalités
 
@@ -15,6 +15,7 @@ Version actuelle : **5** (indiquée en bas du panneau « Plus »).
 - **Navigation guidée** : recherche d'adresse, itinéraire, prochaine manœuvre, distance restante, heure d'arrivée, annonces vocales en français, recalcul automatique si tu quittes l'itinéraire.
 - **Enregistrement de trajets** : historique enregistré sur le téléphone, export au format GPX.
 - **Inclinaison et force G** mesurées avec les capteurs du téléphone (à fixer sur le guidage, puis remise à zéro à l'arrêt).
+- **Installable comme une application** (icône, plein écran), et interface disponible même sans réseau.
 - **Mode jour / nuit**, écran maintenu allumé pendant un trajet ou un guidage.
 
 ## Écrans
@@ -31,10 +32,10 @@ La recherche de destination et les réglages sont à utiliser **à l'arrêt**. L
 ## Mise en ligne avec GitHub Pages
 
 1. Crée un dépôt **public** sur GitHub (par exemple `Nav-mot_`).
-2. Envoie `index.html` à la racine du dépôt : « Add file » ▸ « Upload files », puis « Commit changes ». Le fichier doit s'appeler exactement `index.html`.
+2. Envoie **tous les fichiers** (`index.html`, `manifest.webmanifest`, `sw.js` et les cinq icônes, voir « Structure du projet ») à la racine du dépôt : « Add file » ▸ « Upload files », puis « Commit changes ». Les noms doivent être exacts.
 3. Dans « Settings » ▸ « Pages », choisis « Deploy from a branch », la branche `main` et le dossier `/ (root)`, puis enregistre.
 4. Après quelques minutes, le site est disponible à `https://<ton-pseudo>.github.io/<nom-du-depot>/` (si le dépôt s'appelle `<ton-pseudo>.github.io`, l'adresse est simplement `https://<ton-pseudo>.github.io/`).
-5. Sur le téléphone, ouvre l'adresse dans Chrome puis « Ajouter à l'écran d'accueil ».
+5. Sur le téléphone, ouvre l'adresse dans Chrome puis menu ⋮ ▸ « Installer l'application » (ou « Ajouter à l'écran d'accueil »). L'application s'ouvre ensuite en plein écran, avec son icône.
 
 Pour mettre à jour, remplace `index.html` par la nouvelle version (même nom) et recharge la page, au besoin en navigation privée pour éviter le cache.
 
@@ -51,7 +52,7 @@ Le GPS et les capteurs exigent une adresse en **HTTPS** : ouvrir le fichier dire
 ## Limites connues
 
 - **Itinéraires pour voiture** : le service de calcul utilisé n'a pas de profil moto (pas de routes sinueuses, pas d'évitement d'autoroute).
-- **Connexion obligatoire** : pas de cartes ni d'itinéraires hors ligne.
+- **Connexion obligatoire** pour la carte, la recherche et les itinéraires : seule l'interface s'ouvre sans réseau.
 - **Écran allumé obligatoire** : une page web ne guide plus quand l'écran se verrouille ou que le navigateur passe en arrière-plan.
 - **Inclinaison approximative** : elle dépend de la fixation du téléphone et de sa remise à zéro.
 - **Cap** : fourni par le GPS, mis à jour seulement au-dessus d'environ 6 km/h.
@@ -95,9 +96,18 @@ Ne manipule pas le téléphone en roulant. Prépare la destination à l'arrêt, 
 ## Structure du projet
 
 ```
-index.html   # toute l'application (HTML, CSS, JavaScript)
-README.md    # ce fichier
+index.html            # toute l'application (HTML, CSS, JavaScript)
+manifest.webmanifest  # nom, icônes et affichage de l'application installée
+sw.js                 # service worker : démarrage plus fiable, mises à jour immédiates
+icon.svg              # silhouette de moto (source)
+icon-192.png          # icône
+icon-512.png          # icône
+icon-maskable-512.png # icône adaptative Android
+apple-touch-icon.png  # icône iPhone
+README.md             # ce fichier
 ```
+
+L'icône est un dessin original de roadster sportif, sans logo ni marque : le projet n'est affilié à aucun constructeur.
 
 ## Licence
 

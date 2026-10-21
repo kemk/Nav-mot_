@@ -14,6 +14,15 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Moto Solo Lite</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<link rel="icon" type="image/png" href="icon-192.png">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<meta name="theme-color" content="#eceff1" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#15191d" media="(prefers-color-scheme: dark)">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Moto Lite">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;700&family=Barlow:wght@400;600&display=swap">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.css">
 <style>
@@ -125,7 +134,7 @@ textarea{width:100%;height:140px;margin-top:10px;font:12px monospace}
   <button id="theme">Jour / nuit</button>
   <button id="t-trips">Mes trajets</button>
  </div>
- <p class="empty" style="padding:6px">Version 5 · carte orientée cap en haut</p>
+ <p class="empty" style="padding:6px">Version 6 · application installable</p>
 </section>
 
 <section class="sheet" id="v-trips" hidden>
@@ -438,6 +447,9 @@ initMap();
 startWatch();
 setTimeout(()=>{if(!NS.pos)$('status').textContent='Aucune position reçue : vérifie que la localisation est activée et autorisée, puis appuie sur « Suivi » pour réessayer.'},10000);
 })();
+</script>
+<script>
+if('serviceWorker' in navigator)addEventListener('load',()=>{navigator.serviceWorker.register('sw.js').catch(()=>{})});
 </script>
 </body>
 </html>
