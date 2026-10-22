@@ -134,7 +134,8 @@ textarea{width:100%;height:140px;margin-top:10px;font:12px monospace}
   <button id="theme">Jour / nuit</button>
   <button id="t-trips">Mes trajets</button>
  </div>
- <p class="empty" style="padding:6px">Version 6 · application installable</p>
+ <p class="empty" style="padding:6px 6px 0">Inclinaison : fixe le téléphone sur le guidon, écran vers toi (portrait ou paysage), puis « Mettre l’inclinaison à zéro » à l’arrêt, moto droite.</p>
+ <p class="empty" style="padding:6px">Version 7 · inclinaison corrigée</p>
 </section>
 
 <section class="sheet" id="v-trips" hidden>
@@ -366,6 +367,7 @@ function tick(){
 }
 
 $('go').onclick=function(){
+  enableSensors(false);
   if(!rec){
     if(!startWatch())return;
     S={pts:[],dist:0,max:0,t0:Date.now(),last:null,lean:0,g:0};
@@ -386,10 +388,18 @@ $('go').onclick=function(){
 };
 
 // Inclinaison et force G
+let sensorsOn=false,gotOri=false,calib=false,ax='x',off=0,lastU=[0,0,1];
+const asd=v=>Math.asin(Math.max(-1,Math.min(1,v)))*180/Math.PI;
+// Direction de la verticale dans le repère du téléphone (indépendante des angles d'Euler)
+function upVec(e){const b=e.beta*Math.PI/180,g=e.gamma*Math.PI/180;return [-Math.cos(b)*Math.sin(g),Math.sin(b),Math.cos(b)*Math.cos(g)]}
 function onOri(e){
-  if(e.gamma==null)return;
-  gamma=e.gamma;
-  const l=Math.max(-60,Math.min(60,gamma-offset));
+  if(e.beta==null||e.gamma==null)return;
+  gotOri=true;
+  const u=upVec(e);lastU=u;
+  // axe latéral de la moto = l'axe du téléphone le plus proche de l'horizontale (x en portrait, y en paysage)
+  if(!calib)ax=Math.abs(u[0])<=Math.abs(u[1])?'x':'y';
+  const raw=Math.max(-70,Math.min(70,asd(ax==='x'?u[0]:u[1])-off));
+  const l=cur.lean+(raw-cur.lean)*0.35;
   cur.lean=l;
   $('leanv').textContent=Math.abs(Math.round(l))+'°';
   if(rec&&cur.kmh>10&&Math.abs(l)>S.lean)S.lean=Math.abs(l);
@@ -400,20 +410,30 @@ function onMot(e){
   const g=Math.hypot(a.x,a.y,a.z)/9.81;
   if(g>S.g&&g<4)S.g=g;
 }
-async function enableSensors(){
+async function enableSensors(auto){
+  if(sensorsOn)return;
   try{
     if(window.DeviceOrientationEvent&&DeviceOrientationEvent.requestPermission){
+      if(auto)return; // iPhone : la permission demande un geste de l'utilisateur
       const r=await DeviceOrientationEvent.requestPermission();
-      if(r!=='granted'){$('status').textContent='Capteurs refusés.';return}
+      if(r!=='granted'){$('status').textContent='Capteurs refusés : autorise « Mouvement et orientation » dans les réglages de Safari.';return}
+      try{if(window.DeviceMotionEvent&&DeviceMotionEvent.requestPermission)await DeviceMotionEvent.requestPermission()}catch(e){}
     }
     addEventListener('deviceorientation',onOri);
     addEventListener('devicemotion',onMot);
+    sensorsOn=true;
     $('perm').textContent='Inclinaison active';$('perm').disabled=true;
-    $('status').textContent='Fixe le téléphone sur le guidon, puis appuie sur « Mettre à zéro » à l’arrêt.';
+    if(!auto)$('status').textContent='Fixe le téléphone sur le guidon, écran vers toi, puis « Mettre l’inclinaison à zéro » à l’arrêt.';
+    setTimeout(()=>{if(!gotOri)$('status').textContent='Aucun capteur de mouvement détecté : dans Chrome, ⋮ ▸ Infos sur le site ▸ Autorisations ▸ Capteurs de mouvement ▸ Autoriser.'},2500);
   }catch(e){$('status').textContent='Capteurs indisponibles sur cet appareil.'}
 }
-$('perm').onclick=enableSensors;
-$('cal').onclick=()=>{offset=gamma;$('status').textContent='Inclinaison remise à zéro.'};
+$('perm').onclick=()=>enableSensors(false);
+$('cal').onclick=()=>{
+  if(!gotOri){$('status').textContent='Pas de mesure reçue : active l’inclinaison et vérifie l’autorisation des capteurs.';return}
+  const u=lastU;ax=Math.abs(u[0])<=Math.abs(u[1])?'x':'y';
+  off=asd(ax==='x'?u[0]:u[1]);calib=true;cur.lean=0;
+  $('leanv').textContent='0°';$('status').textContent='Inclinaison remise à zéro (moto droite).';
+};
 
 // Trajets
 function gpx(t){
@@ -445,6 +465,7 @@ function render(){
 // Position dès l’ouverture pour afficher la vitesse
 initMap();
 startWatch();
+enableSensors(true);
 setTimeout(()=>{if(!NS.pos)$('status').textContent='Aucune position reçue : vérifie que la localisation est activée et autorisée, puis appuie sur « Suivi » pour réessayer.'},10000);
 })();
 </script>

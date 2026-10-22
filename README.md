@@ -4,7 +4,7 @@ Application web libre (AGPL-3.0) et minimaliste pour la moto, pensée pour le **
 
 > Projet personnel et indépendant. Il n'est lié ni à MOTO-HUB ADV-SOLO ni à ses auteurs.
 
-Version actuelle : **6** (indiquée en bas du panneau « Plus »).
+Version actuelle : **7** (indiquée en bas du panneau « Plus »).
 
 ## Fonctionnalités
 
@@ -54,7 +54,7 @@ Le GPS et les capteurs exigent une adresse en **HTTPS** : ouvrir le fichier dire
 - **Itinéraires pour voiture** : le service de calcul utilisé n'a pas de profil moto (pas de routes sinueuses, pas d'évitement d'autoroute).
 - **Connexion obligatoire** pour la carte, la recherche et les itinéraires : seule l'interface s'ouvre sans réseau.
 - **Écran allumé obligatoire** : une page web ne guide plus quand l'écran se verrouille ou que le navigateur passe en arrière-plan.
-- **Inclinaison approximative** : elle dépend de la fixation du téléphone et de sa remise à zéro.
+- **Inclinaison** : elle se mesure avec les capteurs du téléphone, fixé sur le guidon **écran vers toi** (portrait ou paysage). Fais « Plus » ▸ « Mettre l'inclinaison à zéro » à l'arrêt, moto droite. Des vibrations ou une fixation qui bouge faussent la mesure.
 - **Cap** : fourni par le GPS, mis à jour seulement au-dessus d'environ 6 km/h.
 - **Noms de rues** : ils tournent avec la carte et peuvent apparaître à l'envers.
 - **Services gratuits partagés** : sans garantie de disponibilité, avec des limites de débit (voir plus bas).
@@ -86,7 +86,7 @@ Pour un usage intensif, remplace les tuiles, la recherche et le routage par un f
 | Page 404 | Vérifie l'adresse : si le dépôt n'est pas nommé `<pseudo>.github.io`, elle se termine par `/<nom-du-depot>/`. Vérifie aussi que le fichier s'appelle bien `index.html` et que Pages est activé. |
 | Pas de position | Active la localisation précise du téléphone, autorise-la pour le site (Chrome ⋮ ▸ « Infos sur le site » ▸ « Autorisations »), rouvre le lien directement dans Chrome, sors à l'air libre, puis appuie sur « Suivi » pour réessayer. La pastille en bas à gauche de la carte indique la cause. |
 | Carte grise ou vide | Vérifie la connexion internet. Si la carte affiche « Carte indisponible », la bibliothèque Leaflet n'a pas pu se charger. |
-| Inclinaison à 0° | Appuie sur « Activer l'inclinaison » dans « Plus » (obligatoire sur iPhone) et vérifie que le téléphone est bien fixé. |
+| Inclinaison à 0° ou figée | Sur iPhone, appuie sur « Activer l'inclinaison » dans « Plus » (ou sur « Démarrer »). Sur Android, autorise les capteurs de mouvement pour le site (Chrome ⋮ ▸ « Infos sur le site » ▸ « Autorisations »). Vérifie que le téléphone est bien fixé écran vers toi, puis fais la remise à zéro à l'arrêt. |
 | Ancienne version affichée | Recharge en navigation privée, ou attends 1 à 2 minutes après l'envoi du fichier. |
 
 ## Sécurité
