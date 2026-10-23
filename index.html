@@ -127,6 +127,8 @@ textarea{width:100%;height:140px;margin-top:10px;font:12px monospace}
   <div class="cell"><span>Incl. max</span><b id="maxlean">0°</b></div>
   <div class="cell"><span>G max</span><b id="maxg">0,0 g</b></div>
  </div>
+ <div class="cell" style="margin-top:10px"><span>Inclinaison en direct</span><b id="leanlive">en attente du capteur…</b></div>
+ <p id="smsg" style="margin:8px 2px;min-height:2.6em;font-weight:600"></p>
  <div class="list2">
   <button id="perm">Activer l’inclinaison</button>
   <button id="cal">Mettre l’inclinaison à zéro</button>
@@ -135,7 +137,7 @@ textarea{width:100%;height:140px;margin-top:10px;font:12px monospace}
   <button id="t-trips">Mes trajets</button>
  </div>
  <p class="empty" style="padding:6px 6px 0">Inclinaison : fixe le téléphone sur le guidon, écran vers toi (portrait ou paysage), puis « Mettre l’inclinaison à zéro » à l’arrêt, moto droite.</p>
- <p class="empty" style="padding:6px">Version 7 · inclinaison corrigée</p>
+ <p class="empty" style="padding:6px">Version 8 · retour visible dans « Plus »</p>
 </section>
 
 <section class="sheet" id="v-trips" hidden>
@@ -367,7 +369,7 @@ function tick(){
 }
 
 $('go').onclick=function(){
-  enableSensors(false);
+  enableSensors('go');
   if(!rec){
     if(!startWatch())return;
     S={pts:[],dist:0,max:0,t0:Date.now(),last:null,lean:0,g:0};
@@ -388,20 +390,21 @@ $('go').onclick=function(){
 };
 
 // Inclinaison et force G
+function msg(t){$('status').textContent=t;$('smsg').textContent=t}
 let sensorsOn=false,gotOri=false,calib=false,ax='x',off=0,lastU=[0,0,1];
 const asd=v=>Math.asin(Math.max(-1,Math.min(1,v)))*180/Math.PI;
 // Direction de la verticale dans le repère du téléphone (indépendante des angles d'Euler)
 function upVec(e){const b=e.beta*Math.PI/180,g=e.gamma*Math.PI/180;return [-Math.cos(b)*Math.sin(g),Math.sin(b),Math.cos(b)*Math.cos(g)]}
 function onOri(e){
   if(e.beta==null||e.gamma==null)return;
-  gotOri=true;
+  if(!gotOri){gotOri=true;msg('Capteur détecté : incline le téléphone pour voir la valeur.')}
   const u=upVec(e);lastU=u;
   // axe latéral de la moto = l'axe du téléphone le plus proche de l'horizontale (x en portrait, y en paysage)
   if(!calib)ax=Math.abs(u[0])<=Math.abs(u[1])?'x':'y';
   const raw=Math.max(-70,Math.min(70,asd(ax==='x'?u[0]:u[1])-off));
   const l=cur.lean+(raw-cur.lean)*0.35;
   cur.lean=l;
-  $('leanv').textContent=Math.abs(Math.round(l))+'°';
+  $('leanv').textContent=Math.abs(Math.round(l))+'°';$('leanlive').textContent=Math.abs(Math.round(l))+'°';
   if(rec&&cur.kmh>10&&Math.abs(l)>S.lean)S.lean=Math.abs(l);
 }
 function onMot(e){
@@ -411,28 +414,28 @@ function onMot(e){
   if(g>S.g&&g<4)S.g=g;
 }
 async function enableSensors(auto){
-  if(sensorsOn)return;
+  if(sensorsOn){if(auto===false)msg(gotOri?'Inclinaison déjà active : incline le téléphone pour voir la valeur.':'Inclinaison activée, mais aucune mesure reçue : autorise les capteurs de mouvement pour ce site (Chrome ⋮ ▸ Infos sur le site ▸ Autorisations).');return}
   try{
     if(window.DeviceOrientationEvent&&DeviceOrientationEvent.requestPermission){
-      if(auto)return; // iPhone : la permission demande un geste de l'utilisateur
+      if(auto===true)return; // iPhone : la permission demande un geste de l'utilisateur
       const r=await DeviceOrientationEvent.requestPermission();
-      if(r!=='granted'){$('status').textContent='Capteurs refusés : autorise « Mouvement et orientation » dans les réglages de Safari.';return}
+      if(r!=='granted'){msg('Capteurs refusés : autorise « Mouvement et orientation » dans les réglages de Safari.');return}
       try{if(window.DeviceMotionEvent&&DeviceMotionEvent.requestPermission)await DeviceMotionEvent.requestPermission()}catch(e){}
     }
     addEventListener('deviceorientation',onOri);
     addEventListener('devicemotion',onMot);
     sensorsOn=true;
-    $('perm').textContent='Inclinaison active';$('perm').disabled=true;
-    if(!auto)$('status').textContent='Fixe le téléphone sur le guidon, écran vers toi, puis « Mettre l’inclinaison à zéro » à l’arrêt.';
-    setTimeout(()=>{if(!gotOri)$('status').textContent='Aucun capteur de mouvement détecté : dans Chrome, ⋮ ▸ Infos sur le site ▸ Autorisations ▸ Capteurs de mouvement ▸ Autoriser.'},2500);
-  }catch(e){$('status').textContent='Capteurs indisponibles sur cet appareil.'}
+    $('perm').textContent='Inclinaison active ✓';
+    if(auto===false)msg('Fixe le téléphone sur le guidon, écran vers toi, puis « Mettre l’inclinaison à zéro » à l’arrêt.');
+    setTimeout(()=>{if(!gotOri){addEventListener('deviceorientationabsolute',onOri);setTimeout(()=>{if(!gotOri)msg('Aucun capteur de mouvement détecté : dans Chrome, ⋮ ▸ Infos sur le site ▸ Autorisations ▸ Capteurs de mouvement ▸ Autoriser.')},1500)}},2500);
+  }catch(e){msg('Capteurs indisponibles sur cet appareil.')}
 }
 $('perm').onclick=()=>enableSensors(false);
 $('cal').onclick=()=>{
-  if(!gotOri){$('status').textContent='Pas de mesure reçue : active l’inclinaison et vérifie l’autorisation des capteurs.';return}
+  if(!gotOri){msg('Pas de mesure reçue : active l’inclinaison et vérifie l’autorisation des capteurs.');return}
   const u=lastU;ax=Math.abs(u[0])<=Math.abs(u[1])?'x':'y';
   off=asd(ax==='x'?u[0]:u[1]);calib=true;cur.lean=0;
-  $('leanv').textContent='0°';$('status').textContent='Inclinaison remise à zéro (moto droite).';
+  $('leanv').textContent='0°';$('leanlive').textContent='0°';msg('Inclinaison remise à zéro (moto droite).');
 };
 
 // Trajets
