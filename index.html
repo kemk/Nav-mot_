@@ -146,7 +146,7 @@ textarea{width:100%;height:140px;margin-top:10px;font:12px monospace}
   <button id="t-trips">Mes trajets</button>
  </div>
  <p class="empty" style="padding:6px 6px 0">Inclinaison : fixe le téléphone sur le guidon, écran vers toi (portrait ou paysage), puis « Mettre l’inclinaison à zéro » à l’arrêt, moto droite.</p>
- <p class="empty" style="padding:6px">Version 10 · calendrier KTM 390 Duke 2020</p>
+ <p class="empty" style="padding:6px">Version 12 · sauvegarde CSV</p>
 </section>
 
 <section class="sheet g" id="v-garage" hidden>
@@ -163,8 +163,14 @@ textarea{width:100%;height:140px;margin-top:10px;font:12px monospace}
  <label><input type="checkbox" id="f-full" checked> Plein complet</label>
  <button id="f-add" style="width:100%">Enregistrer le plein</button>
  <p class="gs" id="f-stats" style="margin-top:8px"></p><div id="f-list"></div>
- <h3>Sauvegarde</h3>
- <div class="row"><button id="g-exp">Exporter</button><button id="g-imp">Importer</button></div>
+ <h3>Historique d’entretien</h3>
+ <p class="gs" id="h-tot"></p><div id="h-list"></div>
+ <h3>Sauvegarde et import</h3>
+ <div class="row"><button id="g-xcsv">Exporter en CSV</button><button id="g-csv">Importer un CSV</button></div>
+ <input type="file" id="g-file" accept=".csv,text/csv,text/plain,application/vnd.ms-excel" hidden>
+ <p class="gs" id="g-imsg" style="margin:0 0 8px;color:var(--ink);font-weight:600"></p>
+ <p class="gs">Le CSV de sauvegarde contient tes pleins, ton historique, ton calendrier d’entretien et ton compteur. L’import accepte aussi un export Fuelio. Les lignes déjà présentes sont ignorées ; le calendrier est remplacé par celui de la sauvegarde.</p>
+ <div class="row"><button id="g-exp">Copier en texte</button><button id="g-imp">Coller un texte</button></div>
 </section>
 
 <section class="sheet" id="v-trips" hidden>
@@ -194,6 +200,7 @@ $('theme').onclick=()=>{
 const GK='msl-garage';
 let GR={model:'',odo:0,tasks:[],fuel:[]};
 try{const x=JSON.parse(localStorage.getItem(GK));if(x&&Array.isArray(x.tasks)&&Array.isArray(x.fuel))GR=x}catch(e){}
+if(!Array.isArray(GR.hist))GR.hist=[];
 function gsave(){try{localStorage.setItem(GK,JSON.stringify(GR))}catch(e){}}
 const today=()=>new Date(Date.now()-new Date().getTimezoneOffset()*6e4).toISOString().slice(0,10);
 const fr=d=>d.split('-').reverse().join('/');
@@ -241,7 +248,7 @@ function grender(){
     d.querySelector('[data-a=f]').onclick=()=>{
       const km=askNum('Compteur (km) lors de l’entretien',GR.odo);if(km===null)return;
       const dt=prompt('Date (AAAA-MM-JJ)',today());if(!/^\d{4}-\d{2}-\d{2}$/.test(dt||''))return;
-      t.lastKm=km;t.lastD=dt;if(km>GR.odo)GR.odo=km;gsave();badge();grender();
+      t.lastKm=km;t.lastD=dt;if(km>GR.odo)GR.odo=km;GR.hist.push({id:Date.now(),t:t.n,d:dt,odo:km,c:0,n:''});gsave();badge();grender();
     };
     d.querySelector('[data-a=m]').onclick=()=>{
       const nm=prompt('Nom de la tâche',t.n);if(!nm)return;
@@ -254,7 +261,7 @@ function grender(){
   });
   // ravitaillements
   const f=[...GR.fuel].sort((a,b)=>a.odo-b.odo);let acc=0,pf=null,sL=0,sK=0,last=null,sp=0,sl=0;
-  f.forEach(e=>{acc+=e.l;if(e.p){sp+=e.p;sl+=e.l}if(e.full){if(pf!=null&&e.odo>pf){sL+=acc;sK+=e.odo-pf;last=acc/(e.odo-pf)*100}pf=e.odo;acc=0}});
+  f.forEach(e=>{acc+=e.l;if(e.p){sp+=e.p;sl+=e.l}if(e.full){if(pf!=null&&e.odo>pf&&!e.miss){sL+=acc;sK+=e.odo-pf;last=acc/(e.odo-pf)*100}pf=e.odo;acc=0}});
   $('f-stats').textContent=sK?'Dernière consommation : '+n1(last)+' L/100 km · moyenne : '+n1(sL/sK*100)+' L/100 km'+(sl?' · prix moyen : '+fmt(sp/sl,2)+' €/L':''):'Enregistre au moins deux pleins complets pour calculer la consommation.';
   const L=$('f-list');L.innerHTML='';
   [...GR.fuel].sort((a,b)=>b.odo-a.odo).slice(0,30).forEach(e=>{
@@ -265,11 +272,112 @@ function grender(){
     d.querySelector('button').onclick=()=>{if(confirm('Supprimer ce ravitaillement ?')){GR.fuel=GR.fuel.filter(x=>x!==e);gsave();grender()}};
     L.appendChild(d);
   });
+  const H=$('h-list');H.innerHTML='';let tot=0;
+  [...GR.hist].sort((a,b)=>b.d.localeCompare(a.d)||b.odo-a.odo).forEach(h=>{
+    tot+=h.c||0;
+    const d=document.createElement('div');d.className='task ok';
+    d.innerHTML='<b></b><small></small><small style="white-space:pre-line"></small><div class="row"><button>Suppr.</button></div>';
+    d.querySelector('b').textContent=h.t;
+    const sm=d.querySelectorAll('small');sm[0].textContent=fr(h.d)+(h.odo?' · '+h.odo+' km':'')+(h.c?' · '+fmt(h.c,2)+' €':'');sm[1].textContent=h.n||'';
+    if(!h.n)sm[1].remove();
+    d.querySelector('button').onclick=()=>{if(confirm('Supprimer cette ligne ?')){GR.hist=GR.hist.filter(x=>x!==h);gsave();grender()}};
+    H.appendChild(d);
+  });
+  $('h-tot').textContent=GR.hist.length?GR.hist.length+' intervention(s) · total '+fmt(tot,2)+' €':'Aucune intervention enregistrée : touche « Fait » sur une tâche ou importe un CSV.';
   $('f-odo').value=GR.odo||'';$('f-d').value=today();
 }
 if(!GR.model&&!GR.tasks.length){GR.model='2013';GR.tasks=plan('2013')}
 if(GR.model&&(GR.pv||0)<PV&&!GR.tasks.some(t=>t.lastKm!=null||t.lastD))GR.tasks=plan(GR.model);
 GR.pv=PV;gsave();
+// Import d'un export Fuelio (CSV)
+function parseCSV(txt){
+  const rows=[];let row=[],f='',q=false;
+  txt=txt.replace(/^\uFEFF/,'');
+  for(let i=0;i<txt.length;i++){
+    const c=txt[i];
+    if(q){if(c==='"'){if(txt[i+1]==='"'){f+='"';i++}else q=false}else f+=c}
+    else if(c==='"')q=true;
+    else if(c===','){row.push(f);f=''}
+    else if(c==='\n'||c==='\r'){if(c==='\r'&&txt[i+1]==='\n')i++;row.push(f);f='';rows.push(row);row=[]}
+    else f+=c;
+  }
+  if(f!==''||row.length){row.push(f);rows.push(row)}
+  return rows;
+}
+function sections(rows){
+  const S={};let cur=null,head=null;
+  rows.forEach(r=>{
+    if(r.length===1&&/^##/.test(r[0])){cur=r[0].replace(/^##\s*/,'').trim();S[cur]=[];head=null;return}
+    if(!cur||(r.length===1&&r[0]===''))return;
+    if(!head){head=r;return}
+    const o={};head.forEach((h,k)=>o[h]=r[k]);S[cur].push(o);
+  });
+  return S;
+}
+const norm=s=>String(s||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase();
+const RULES=[[/vidange|huile/,/^revision/],[/filtre a air/,/filtre a air/],[/chaine/,/^chaine/],[/soupape|bougie/,/^soupapes/],[/refroidissement|coolant/,/refroidissement/],[/liquide (de )?frein/,/frein/]];
+function importFuelio(txt){
+  const S=sections(parseCSV(txt));
+  if(!S.Log&&!S.Costs&&!S.Tasks)throw new Error('format');
+  const ok=d=>/^\d{4}-\d{2}-\d{2}$/.test(d);
+  let nf=0,sf=0,nh=0,sh=0,mo=GR.odo;const touched=new Set();
+  (S.Log||[]).forEach(o=>{
+    const odo=parseFloat(o['Odo (km)']),l=parseFloat(o['Fuel (litres)']),d=String(o.Data||'').slice(0,10);
+    if(isNaN(odo)||isNaN(l)||l<=0||!ok(d))return;
+    if(odo>mo)mo=odo;
+    if(GR.fuel.some(e=>e.d===d&&e.odo===odo&&Math.abs(e.l-l)<0.01)){sf++;return}
+    GR.fuel.push({id:Date.now()+nf,d:d,odo:odo,l:l,p:parseFloat(o['Price (optional)'])||0,full:o.Full==='1',miss:o.Missed==='1'});nf++;
+  });
+  (S.Costs||[]).forEach(o=>{
+    const odo=parseFloat(o.Odo),d=String(o.Date||'').slice(0,10),t=o.CostTitle||'';
+    if(!ok(d))return;
+    if(!isNaN(odo)&&odo>mo)mo=odo;
+    const k=norm(t+' '+(o.Notes||''));
+    RULES.forEach(([a,b])=>{
+      if(!a.test(k))return;
+      const task=GR.tasks.find(x=>b.test(norm(x.n)));
+      if(task&&(!task.lastD||d>task.lastD||(d===task.lastD&&odo>(task.lastKm||0)))){task.lastKm=isNaN(odo)?null:odo;task.lastD=d;touched.add(task.n)}
+    });
+    if(GR.hist.some(h=>h.d===d&&h.odo===(isNaN(odo)?0:odo)&&h.t===t)){sh++;return}
+    GR.hist.push({id:Date.now()+1000+nh,t:t,d:d,odo:isNaN(odo)?0:odo,c:parseFloat(o.Cost)||0,n:o.Notes||''});nh++;
+  });
+  let ntk=0;
+  const meta={};(S.MotoSoloLite||[]).forEach(o=>meta[o.Key]=o.Value);
+  if(S.Tasks&&S.Tasks.length){
+    GR.tasks=S.Tasks.filter(o=>o.Name).map((o,i)=>({id:Date.now()+2000+i,n:o.Name,km:parseFloat(o.KmInterval)||0,mo:parseFloat(o.MonthInterval)||0,once:o.Once==='1',lastKm:o.LastKm===''||o.LastKm==null||isNaN(parseFloat(o.LastKm))?null:parseFloat(o.LastKm),lastD:o.LastDate||''}));
+    ntk=GR.tasks.length;if(meta.Model!==undefined)GR.model=meta.Model;
+  }
+  if(parseFloat(meta.Odo)>mo)mo=parseFloat(meta.Odo);
+  GR.odo=mo;gsave();badge();grender();
+  $('g-imsg').textContent=nf+' plein(s) importé(s)'+(sf?' ('+sf+' déjà présent(s))':'')+' · '+nh+' intervention(s) ajoutée(s)'+(sh?' ('+sh+' déjà présente(s))':'')+' · tâches mises à jour : '+([...touched].join(', ')||'aucune')+(ntk?' · calendrier restauré ('+ntk+' tâches)':'')+' · compteur : '+GR.odo+' km.';
+}
+function buildCSV(){
+  const q=v=>'"'+String(v==null?'':v).replace(/"/g,'""')+'"',L=a=>a.map(q).join(',');
+  const o=['"## MotoSoloLite"',L(['Key','Value']),L(['Version','1']),L(['Model',GR.model]),L(['Odo',GR.odo]),
+    '"## Log"',L(['Data','Odo (km)','Fuel (litres)','Full','Price (optional)','Missed'])];
+  GR.fuel.forEach(e=>o.push(L([e.d+' 00:00',e.odo,e.l,e.full?1:0,e.p||0,e.miss?1:0])));
+  o.push('"## Costs"',L(['CostTitle','Date','Odo','Notes','Cost']));
+  GR.hist.forEach(h=>o.push(L([h.t,h.d+' 00:00',h.odo,h.n,h.c||0])));
+  o.push('"## Tasks"',L(['Name','KmInterval','MonthInterval','Once','LastKm','LastDate']));
+  GR.tasks.forEach(t=>o.push(L([t.n,t.km,t.mo,t.once?1:0,t.lastKm==null?'':t.lastKm,t.lastD||''])));
+  return '\uFEFF'+o.join('\n')+'\n';
+}
+async function exportCSV(){
+  const name='moto-solo-lite-'+today()+'.csv',blob=new Blob([buildCSV()],{type:'text/csv'});
+  try{
+    const file=new File([blob],name,{type:'text/csv'});
+    if(navigator.canShare&&navigator.canShare({files:[file]})){await navigator.share({files:[file],title:name});$('g-imsg').textContent='Sauvegarde envoyée : '+name;return}
+  }catch(e){if(e&&e.name==='AbortError')return}
+  const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=name;document.body.appendChild(a);a.click();
+  setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove()},1500);
+  $('g-imsg').textContent='Sauvegarde téléchargée : '+name+' (dans les téléchargements du téléphone).';
+}
+$('g-xcsv').onclick=exportCSV;
+$('g-csv').onclick=()=>$('g-file').click();
+$('g-file').onchange=async function(){
+  const f=this.files[0];this.value='';if(!f)return;
+  try{importFuelio(await f.text())}catch(e){$('g-imsg').textContent='Fichier non reconnu : choisis une sauvegarde CSV de l’application ou un export Fuelio.'}
+};
 const SRC={'2013':'Intervalles du manuel KTM 390 Duke 2013-2023 (recopiés sur maintenanceschedule.com d’après le manuel 2021) : vérifie-les dans ton manuel. Jeu de chaîne : 5 à 7 mm. Pneus : 2,0 bar (2,2 bar à l’arrière avec passager).','2024':'Seuls la révision et le premier entretien sont préremplis pour le modèle 2024 et après : complète le reste d’après ton manuel.','autre':'Renseigne les intervalles d’après le manuel de ta moto.'};
 $('g-reset').onclick=()=>{if(!GR.model)return;if(confirm('Recharger le calendrier du constructeur ? Tes dates de dernier entretien seront effacées.')){GR.tasks=plan(GR.model);gsave();badge();grender()}};
 $('t-garage').onclick=()=>openSheet('v-garage');
@@ -300,7 +408,7 @@ $('g-exp').onclick=async()=>{
 $('g-imp').onclick=()=>{
   const j=prompt('Colle ici la sauvegarde exportée');if(!j)return;
   try{const x=JSON.parse(j);if(!Array.isArray(x.tasks)||!Array.isArray(x.fuel))throw 0;
-    if(confirm('Remplacer les données actuelles par cette sauvegarde ?')){GR=x;gsave();badge();grender()}}
+    if(confirm('Remplacer les données actuelles par cette sauvegarde ?')){GR=x;if(!Array.isArray(GR.hist))GR.hist=[];gsave();badge();grender()}}
   catch(e){alert('Sauvegarde illisible.')}
 };
 // Panneaux

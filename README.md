@@ -4,7 +4,7 @@ Application web libre (AGPL-3.0) et minimaliste pour la moto, pensée pour le **
 
 > Projet personnel et indépendant. Il n'est lié ni à MOTO-HUB ADV-SOLO ni à ses auteurs.
 
-Version actuelle : **10** (indiquée en bas du panneau « Plus »).
+Version actuelle : **12** (indiquée en bas du panneau « Plus »).
 
 ## Fonctionnalités
 
@@ -16,7 +16,7 @@ Version actuelle : **10** (indiquée en bas du panneau « Plus »).
 - **Enregistrement de trajets** : historique enregistré sur le téléphone, export au format GPX.
 - **Inclinaison et force G** mesurées avec les capteurs du téléphone (à fixer sur le guidage, puis remise à zéro à l'arrêt).
 - **Installable comme une application** (icône, plein écran), et interface disponible même sans réseau.
-- **Entretien et ravitaillements** (« Plus » ▸ « Entretien et ravitaillements ») : calendrier d'entretien avec rappels (en retard / bientôt / à jour) selon le kilométrage et la date, suivi des pleins avec consommation en L/100 km et prix moyen au litre, sauvegarde par export/import.
+- **Entretien et ravitaillements** (« Plus » ▸ « Entretien et ravitaillements ») : calendrier d'entretien avec rappels (en retard / bientôt / à jour) selon le kilométrage et la date, suivi des pleins avec consommation en L/100 km et prix moyen au litre, historique des interventions avec leur coût, sauvegarde par export/import et **import d'un export CSV Fuelio**.
 - **Mode jour / nuit**, écran maintenu allumé pendant un trajet ou un guidage.
 
 ## Écrans
@@ -67,6 +67,24 @@ Le calendrier de la **KTM 390 Duke 2013 à 2023 (373 cc)**, dont le modèle 2020
 Pour le modèle **2024 et après**, seuls le premier entretien (1 000 km) et la révision (10 000 km ou 12 mois) sont préremplis ; le reste est à compléter. Ces valeurs viennent d'une copie du manuel, pas du manuel officiel : **vérifie-les dans ton manuel d'utilisation** et corrige-les avec « Modifier ». Le manuel et ton concessionnaire font foi.
 
 Les rappels s'affichent dans l'application (pastille « Plus (n) »). Une page web ne peut pas envoyer de notification quand elle est fermée. Le compteur kilométrique est estimé à partir de tes trajets enregistrés : corrige-le régulièrement.
+
+## Sauvegarde et restauration en CSV
+
+Dans « Plus » ▸ « Entretien et ravitaillements » :
+- **Exporter en CSV** crée un fichier `moto-solo-lite-AAAA-MM-JJ.csv` (sur téléphone, la fenêtre de partage te permet de l'enregistrer dans Drive ou Fichiers ; sinon il est téléchargé). Il contient le compteur, les pleins, l'historique d'entretien et le calendrier d'entretien avec ses intervalles et ses dates de dernier entretien.
+- **Importer un CSV** relit ce fichier, par exemple après avoir changé de téléphone ou vidé les données du navigateur. Les pleins et interventions déjà présents sont ignorés (pas de doublons) ; le **calendrier est remplacé** par celui de la sauvegarde.
+- Le même bouton accepte aussi un export Fuelio (voir ci-dessous).
+
+Pense à exporter régulièrement : les données ne sont stockées que dans le navigateur du téléphone.
+
+## Importer un export Fuelio
+
+Dans « Plus » ▸ « Entretien et ravitaillements » ▸ « Importer un CSV Fuelio », choisis le fichier exporté depuis Fuelio (`.csv`). L'application lit :
+- les **pleins** (compteur, litres, prix total, plein complet ou non) ;
+- les **interventions d'entretien** (titre, date, compteur, coût, notes), ajoutées à l'historique ;
+- le **compteur** : le plus élevé trouvé dans le fichier.
+
+Les tâches du calendrier sont mises à jour automatiquement d'après les mots-clés du titre et des notes (vidange ou huile, filtre à air, chaîne, soupapes ou bougie, refroidissement, liquide de frein) : la date la plus récente est retenue. Vérifie le résultat tâche par tâche. Les lignes déjà présentes sont ignorées, donc tu peux réimporter un export plus récent sans créer de doublons. Les pneus, plaquettes ou autres lignes sans tâche correspondante restent dans l'historique.
 
 ## Limites connues
 
