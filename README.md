@@ -4,7 +4,7 @@ Application web libre (AGPL-3.0) et minimaliste pour la moto, pensée pour le **
 
 > Projet personnel et indépendant. Il n'est lié ni à MOTO-HUB ADV-SOLO ni à ses auteurs.
 
-Version actuelle : **7** (indiquée en bas du panneau « Plus »).
+Version actuelle : **10** (indiquée en bas du panneau « Plus »).
 
 ## Fonctionnalités
 
@@ -16,6 +16,7 @@ Version actuelle : **7** (indiquée en bas du panneau « Plus »).
 - **Enregistrement de trajets** : historique enregistré sur le téléphone, export au format GPX.
 - **Inclinaison et force G** mesurées avec les capteurs du téléphone (à fixer sur le guidage, puis remise à zéro à l'arrêt).
 - **Installable comme une application** (icône, plein écran), et interface disponible même sans réseau.
+- **Entretien et ravitaillements** (« Plus » ▸ « Entretien et ravitaillements ») : calendrier d'entretien avec rappels (en retard / bientôt / à jour) selon le kilométrage et la date, suivi des pleins avec consommation en L/100 km et prix moyen au litre, sauvegarde par export/import.
 - **Mode jour / nuit**, écran maintenu allumé pendant un trajet ou un guidage.
 
 ## Écrans
@@ -48,6 +49,24 @@ Le GPS et les capteurs exigent une adresse en **HTTPS** : ouvrir le fichier dire
 3. Choisis ta destination dans « Destination » et touche un résultat pour lancer le guidage.
 4. Appuie sur **Démarrer** pour enregistrer le trajet, puis sur **Arrêter** à l'arrivée.
 5. Retrouve et exporte tes trajets dans « Plus » ▸ « Mes trajets ».
+
+## Entretien : d'où viennent les intervalles ?
+
+Le calendrier de la **KTM 390 Duke 2013 à 2023 (373 cc)**, dont le modèle 2020, reprend le tableau du manuel KTM tel qu'il est recopié sur [maintenanceschedule.com](https://maintenanceschedule.com/ktm-390-duke-maintenance-schedule/) d'après le manuel 2021 :
+
+| Tâche | Intervalle |
+|---|---|
+| Premier entretien | 1 000 km |
+| Révision : huile, filtre, crépines, contrôles | 7 500 km ou 12 mois |
+| Filtre à air | 7 500 km |
+| Chaîne et pignons : contrôle | 7 500 km ou 12 mois |
+| Soupapes (jeu) et bougie | 15 000 km |
+| Liquide de frein (avant et arrière) | 2 ans |
+| Liquide de refroidissement | 4 ans |
+
+Pour le modèle **2024 et après**, seuls le premier entretien (1 000 km) et la révision (10 000 km ou 12 mois) sont préremplis ; le reste est à compléter. Ces valeurs viennent d'une copie du manuel, pas du manuel officiel : **vérifie-les dans ton manuel d'utilisation** et corrige-les avec « Modifier ». Le manuel et ton concessionnaire font foi.
+
+Les rappels s'affichent dans l'application (pastille « Plus (n) »). Une page web ne peut pas envoyer de notification quand elle est fermée. Le compteur kilométrique est estimé à partir de tes trajets enregistrés : corrige-le régulièrement.
 
 ## Limites connues
 

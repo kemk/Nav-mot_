@@ -77,6 +77,14 @@ textarea{width:100%;height:140px;margin-top:10px;font:12px monospace}
 .mc #bmode{font-size:14px}
 .attr{position:absolute;right:0;bottom:0;z-index:5;background:rgba(255,255,255,.85);color:#222;font-size:11px;padding:1px 6px;border-top-left-radius:6px}
 .attr a{color:#0a4fa3}
+.g h3{margin:16px 0 6px;font:700 22px 'Barlow Condensed',sans-serif}
+.g input,.g select{width:100%;margin-bottom:6px;font:inherit;color:var(--ink);background:var(--card);border:1.5px solid var(--line);border-radius:10px;padding:10px;min-height:48px}
+.g label{display:flex;gap:8px;align-items:center;margin-bottom:8px}.g label input{width:auto;min-height:0;margin:0}
+.task{background:var(--card);border:1.5px solid var(--line);border-left-width:7px;border-radius:10px;padding:8px 10px;margin-bottom:8px}
+.task.over{border-left-color:var(--rec)}.task.soon{border-left-color:#e08a00}.task.ok{border-left-color:var(--ok)}
+.task b{display:block}.task small{display:block;color:var(--mute)}
+.task .row{margin:6px 0 0}.task .row button{min-height:40px;font-size:14px}
+.gs{color:var(--mute);font-size:13px;margin:0 0 8px}
 @media (orientation:landscape){
  #app{grid-template-columns:minmax(230px,40%) minmax(0,1fr);grid-template-rows:minmax(0,1fr) auto;grid-template-areas:"hd map" "bar map"}
  .hd{flex-direction:column;align-items:stretch;gap:4px;min-height:0}
@@ -134,10 +142,29 @@ textarea{width:100%;height:140px;margin-top:10px;font:12px monospace}
   <button id="cal">Mettre l’inclinaison à zéro</button>
   <button id="voice">Voix activée</button>
   <button id="theme">Jour / nuit</button>
+  <button id="t-garage">Entretien et ravitaillements</button>
   <button id="t-trips">Mes trajets</button>
  </div>
  <p class="empty" style="padding:6px 6px 0">Inclinaison : fixe le téléphone sur le guidon, écran vers toi (portrait ou paysage), puis « Mettre l’inclinaison à zéro » à l’arrêt, moto droite.</p>
- <p class="empty" style="padding:6px">Version 8 · retour visible dans « Plus »</p>
+ <p class="empty" style="padding:6px">Version 10 · calendrier KTM 390 Duke 2020</p>
+</section>
+
+<section class="sheet g" id="v-garage" hidden>
+ <div class="sh"><h2>Entretien</h2><button data-close>Fermer</button></div>
+ <select id="g-model" aria-label="Modèle de moto"><option value="">Choisis ta moto…</option><option value="2024">KTM 390 Duke 2024 et après (398 cc)</option><option value="2013">KTM 390 Duke 2013 à 2023 (373 cc), dont 2020</option><option value="autre">Autre moto (je saisis mon manuel)</option></select>
+ <div class="row"><input id="g-odo" type="number" inputmode="decimal" step="0.1" placeholder="Compteur (km)" aria-label="Compteur en km"><button id="g-odo-ok">Mettre à jour</button></div>
+ <p class="gs">Le compteur augmente tout seul avec tes trajets enregistrés : corrige-le au besoin. Les rappels n’apparaissent que dans l’application, pas en notification.</p>
+ <p class="gs" id="g-src"></p>
+ <h3>À faire</h3><div id="g-tasks"></div>
+ <div class="row"><button id="g-add">Ajouter une tâche</button><button id="g-reset">Recharger le calendrier</button></div>
+ <h3>Ravitaillements</h3>
+ <div class="row"><input id="f-odo" type="number" inputmode="decimal" placeholder="Compteur (km)"><input id="f-l" type="number" inputmode="decimal" step="0.01" placeholder="Litres"></div>
+ <div class="row"><input id="f-p" type="number" inputmode="decimal" step="0.01" placeholder="Prix total (€)"><input id="f-d" type="date"></div>
+ <label><input type="checkbox" id="f-full" checked> Plein complet</label>
+ <button id="f-add" style="width:100%">Enregistrer le plein</button>
+ <p class="gs" id="f-stats" style="margin-top:8px"></p><div id="f-list"></div>
+ <h3>Sauvegarde</h3>
+ <div class="row"><button id="g-exp">Exporter</button><button id="g-imp">Importer</button></div>
 </section>
 
 <section class="sheet" id="v-trips" hidden>
@@ -163,9 +190,122 @@ $('theme').onclick=()=>{
   r.dataset.theme=dark?'light':'dark';
 };
 
+// Entretien et ravitaillements
+const GK='msl-garage';
+let GR={model:'',odo:0,tasks:[],fuel:[]};
+try{const x=JSON.parse(localStorage.getItem(GK));if(x&&Array.isArray(x.tasks)&&Array.isArray(x.fuel))GR=x}catch(e){}
+function gsave(){try{localStorage.setItem(GK,JSON.stringify(GR))}catch(e){}}
+const today=()=>new Date(Date.now()-new Date().getTimezoneOffset()*6e4).toISOString().slice(0,10);
+const fr=d=>d.split('-').reverse().join('/');
+const n1=(x)=>fmt(x,1);
+// Intervalles recopiés du manuel KTM (2013-2023) : à vérifier dans TON manuel (0 = à renseigner)
+const PLANS={
+ '2024':[['Premier entretien (rodage)',1000,0,1],['Révision : huile, filtre et contrôles',10000,12,0]],
+ '2013':[['Premier entretien (rodage)',1000,0,1],['Révision : huile, filtre, crépines et contrôles',7500,12,0],['Filtre à air : remplacement',7500,0,0],['Chaîne et pignons : contrôle',7500,12,0],['Soupapes (jeu) et bougie',15000,0,0],['Liquide de frein (avant et arrière)',0,24,0],['Liquide de refroidissement',0,48,0]],
+ 'autre':[['Révision périodique',0,12,0]]
+};
+const PV=2;
+const COMMON=['Liquide de frein','Liquide de refroidissement','Filtre à air','Chaîne : graissage et tension','Pneus et plaquettes : contrôle'];
+function plan(m){return (PLANS[m]||[]).concat(m==='2013'?[]:COMMON.map(n=>[n,0,0,0])).map((p,i)=>({id:Date.now()+i,n:p[0],km:p[1],mo:p[2],once:!!p[3],lastKm:null,lastD:''}))}
+function addMonths(d,m){const x=new Date(d+'T12:00:00');x.setMonth(x.getMonth()+m);return x}
+function tstat(t){
+  if(t.once&&t.lastKm!=null)return null;
+  const base=t.lastKm!=null?t.lastKm:(t.once&&GR.odo<=t.km*1.5?0:null);
+  const dk=(t.km&&base!=null)?base+t.km-GR.odo:null;
+  const dd=(t.mo&&t.lastD)?Math.round((addMonths(t.lastD,t.mo)-new Date())/864e5):null;
+  if(dk==null&&dd==null)return {state:'nobase',rank:2,txt:(t.km||t.mo)?'Dernier entretien non renseigné : touche « Fait ».':'Intervalle à renseigner d’après ton manuel : touche « Modifier ».'};
+  const over=(dk!=null&&dk<0)||(dd!=null&&dd<0);
+  const soon=(dk!=null&&dk<=Math.min(500,(t.km||0)*0.1))||(dd!=null&&dd<=30);
+  const p=[];if(dk!=null)p.push(dk<0?'en retard de '+Math.round(-dk)+' km':'dans '+Math.round(dk)+' km');
+  if(dd!=null)p.push(dd<0?'échéance dépassée ('+fr(addMonths(t.lastD,t.mo).toISOString().slice(0,10))+')':'avant le '+fr(addMonths(t.lastD,t.mo).toISOString().slice(0,10)));
+  return {state:over?'over':soon?'soon':'ok',rank:over?0:soon?1:3,txt:p.join(' · ')};
+}
+function badge(){
+  let n=0;GR.tasks.forEach(t=>{const s=tstat(t);if(s&&(s.state==='over'||s.state==='soon'))n++});
+  $('b-more').textContent=n?'Plus ('+n+')':'Plus';
+  $('t-garage').textContent=n?'Entretien et ravitaillements ('+n+' à prévoir)':'Entretien et ravitaillements';
+}
+function askNum(q,def){const v=prompt(q,def);if(v===null)return null;const x=parseFloat(String(v).replace(',','.'));return isNaN(x)?null:x}
+function grender(){
+  $('g-model').value=GR.model||'';$('g-odo').value=GR.odo?GR.odo:'';
+  $('g-src').textContent=SRC[GR.model]||'';
+  const box=$('g-tasks');box.innerHTML='';
+  if(!GR.tasks.length)box.innerHTML='<p class="gs">Choisis ta moto pour charger le calendrier d’entretien.</p>';
+  GR.tasks.map(t=>({t:t,s:tstat(t)})).filter(x=>x.s).sort((a,b)=>a.s.rank-b.s.rank).forEach(({t,s})=>{
+    const d=document.createElement('div');d.className='task '+s.state;
+    const iv=[t.km?t.km+' km':'',t.mo?t.mo+' mois':''].filter(Boolean).join(' / ')||'intervalle non défini';
+    d.innerHTML='<b></b><small></small><small></small><div class="row"><button data-a="f">Fait</button><button data-a="m">Modifier</button><button data-a="x">Suppr.</button></div>';
+    d.querySelector('b').textContent=t.n;
+    const sm=d.querySelectorAll('small');sm[0].textContent=(s.state==='over'?'À faire : ':s.state==='soon'?'Bientôt : ':'')+s.txt;
+    sm[1].textContent='Tous les '+iv+(t.lastKm!=null||t.lastD?' · fait le '+(t.lastD?fr(t.lastD):'?')+(t.lastKm!=null?' à '+t.lastKm+' km':''):'');
+    d.querySelector('[data-a=f]').onclick=()=>{
+      const km=askNum('Compteur (km) lors de l’entretien',GR.odo);if(km===null)return;
+      const dt=prompt('Date (AAAA-MM-JJ)',today());if(!/^\d{4}-\d{2}-\d{2}$/.test(dt||''))return;
+      t.lastKm=km;t.lastD=dt;if(km>GR.odo)GR.odo=km;gsave();badge();grender();
+    };
+    d.querySelector('[data-a=m]').onclick=()=>{
+      const nm=prompt('Nom de la tâche',t.n);if(!nm)return;
+      const km=askNum('Intervalle en km, d’après ton manuel (0 = aucun)',t.km);if(km===null)return;
+      const mo=askNum('Intervalle en mois (0 = aucun)',t.mo);if(mo===null)return;
+      t.n=nm;t.km=Math.max(0,km);t.mo=Math.max(0,mo);gsave();badge();grender();
+    };
+    d.querySelector('[data-a=x]').onclick=()=>{if(confirm('Supprimer cette tâche ?')){GR.tasks=GR.tasks.filter(x=>x!==t);gsave();badge();grender()}};
+    box.appendChild(d);
+  });
+  // ravitaillements
+  const f=[...GR.fuel].sort((a,b)=>a.odo-b.odo);let acc=0,pf=null,sL=0,sK=0,last=null,sp=0,sl=0;
+  f.forEach(e=>{acc+=e.l;if(e.p){sp+=e.p;sl+=e.l}if(e.full){if(pf!=null&&e.odo>pf){sL+=acc;sK+=e.odo-pf;last=acc/(e.odo-pf)*100}pf=e.odo;acc=0}});
+  $('f-stats').textContent=sK?'Dernière consommation : '+n1(last)+' L/100 km · moyenne : '+n1(sL/sK*100)+' L/100 km'+(sl?' · prix moyen : '+fmt(sp/sl,2)+' €/L':''):'Enregistre au moins deux pleins complets pour calculer la consommation.';
+  const L=$('f-list');L.innerHTML='';
+  [...GR.fuel].sort((a,b)=>b.odo-a.odo).slice(0,30).forEach(e=>{
+    const d=document.createElement('div');d.className='task ok';
+    d.innerHTML='<b></b><small></small><div class="row"><button>Suppr.</button></div>';
+    d.querySelector('b').textContent=fr(e.d)+' · '+e.odo+' km';
+    d.querySelector('small').textContent=fmt(e.l,2)+' L'+(e.p?' · '+fmt(e.p,2)+' € ('+fmt(e.p/e.l,2)+' €/L)':'')+(e.full?' · plein':' · partiel');
+    d.querySelector('button').onclick=()=>{if(confirm('Supprimer ce ravitaillement ?')){GR.fuel=GR.fuel.filter(x=>x!==e);gsave();grender()}};
+    L.appendChild(d);
+  });
+  $('f-odo').value=GR.odo||'';$('f-d').value=today();
+}
+if(!GR.model&&!GR.tasks.length){GR.model='2013';GR.tasks=plan('2013')}
+if(GR.model&&(GR.pv||0)<PV&&!GR.tasks.some(t=>t.lastKm!=null||t.lastD))GR.tasks=plan(GR.model);
+GR.pv=PV;gsave();
+const SRC={'2013':'Intervalles du manuel KTM 390 Duke 2013-2023 (recopiés sur maintenanceschedule.com d’après le manuel 2021) : vérifie-les dans ton manuel. Jeu de chaîne : 5 à 7 mm. Pneus : 2,0 bar (2,2 bar à l’arrière avec passager).','2024':'Seuls la révision et le premier entretien sont préremplis pour le modèle 2024 et après : complète le reste d’après ton manuel.','autre':'Renseigne les intervalles d’après le manuel de ta moto.'};
+$('g-reset').onclick=()=>{if(!GR.model)return;if(confirm('Recharger le calendrier du constructeur ? Tes dates de dernier entretien seront effacées.')){GR.tasks=plan(GR.model);gsave();badge();grender()}};
+$('t-garage').onclick=()=>openSheet('v-garage');
+$('g-model').onchange=function(){
+  const v=this.value;
+  if(GR.tasks.some(t=>t.lastKm!=null||t.lastD)&&!confirm('Remplacer le calendrier ? Les dates de dernier entretien seront effacées.')){this.value=GR.model||'';return}
+  GR.model=v;GR.tasks=v?plan(v):[];gsave();badge();grender();
+};
+$('g-odo-ok').onclick=()=>{const v=parseFloat($('g-odo').value);if(!isNaN(v)&&v>=0){GR.odo=v;gsave();badge();grender()}};
+$('g-add').onclick=()=>{
+  const nm=prompt('Nom de la tâche');if(!nm)return;
+  const km=askNum('Intervalle en km, d’après ton manuel (0 = aucun)',0);if(km===null)return;
+  const mo=askNum('Intervalle en mois (0 = aucun)',0);if(mo===null)return;
+  GR.tasks.push({id:Date.now(),n:nm,km:Math.max(0,km),mo:Math.max(0,mo),once:false,lastKm:null,lastD:''});gsave();badge();grender();
+};
+$('f-add').onclick=()=>{
+  const odo=parseFloat($('f-odo').value),l=parseFloat($('f-l').value),p=parseFloat($('f-p').value),d=$('f-d').value||today();
+  if(isNaN(odo)||isNaN(l)||l<=0){alert('Renseigne le compteur et les litres.');return}
+  GR.fuel.push({id:Date.now(),d:d,odo:odo,l:l,p:isNaN(p)?0:p,full:$('f-full').checked});
+  if(odo>GR.odo)GR.odo=odo;
+  ['f-l','f-p'].forEach(i=>$(i).value='');gsave();badge();grender();
+};
+$('g-exp').onclick=async()=>{
+  const j=JSON.stringify(GR);
+  try{if(navigator.share){await navigator.share({title:'Sauvegarde Moto Solo Lite',text:j});return}await navigator.clipboard.writeText(j);alert('Sauvegarde copiée dans le presse-papiers.')}
+  catch(e){prompt('Copie ce texte :',j)}
+};
+$('g-imp').onclick=()=>{
+  const j=prompt('Colle ici la sauvegarde exportée');if(!j)return;
+  try{const x=JSON.parse(j);if(!Array.isArray(x.tasks)||!Array.isArray(x.fuel))throw 0;
+    if(confirm('Remplacer les données actuelles par cette sauvegarde ?')){GR=x;gsave();badge();grender()}}
+  catch(e){alert('Sauvegarde illisible.')}
+};
 // Panneaux
 function closeSheets(){document.querySelectorAll('.sheet').forEach(e=>e.hidden=true);setTimeout(()=>map&&map.invalidateSize(),60)}
-function openSheet(id){closeSheets();$(id).hidden=false;if(id==='v-trips')render()}
+function openSheet(id){closeSheets();$(id).hidden=false;if(id==='v-trips')render();if(id==='v-garage')grender()}
 $('b-dest').onclick=()=>openSheet('v-dest');$('b-more').onclick=()=>openSheet('v-more');$('t-trips').onclick=()=>openSheet('v-trips');
 document.querySelectorAll('[data-close]').forEach(b=>b.onclick=closeSheets);
 
@@ -384,7 +524,8 @@ $('go').onclick=function(){
     if(S.pts.length>1){
       const dur=Math.round((Date.now()-S.t0)/1000);
       trips.unshift({id:S.t0,start:S.t0,dur:dur,dist:S.dist,max:S.max,lean:S.lean,g:S.g,pts:S.pts.slice(0,6000)});
-      save();$('status').textContent='Trajet enregistré dans l’onglet Trajets.';
+      save();GR.odo=Math.round((GR.odo+S.dist/1000)*10)/10;gsave();badge();
+      $('status').textContent='Trajet enregistré dans l’onglet Trajets.';
     }else $('status').textContent='Trajet trop court : rien n’a été enregistré.';
   }
 };
@@ -469,6 +610,7 @@ function render(){
 initMap();
 startWatch();
 enableSensors(true);
+badge();
 setTimeout(()=>{if(!NS.pos)$('status').textContent='Aucune position reçue : vérifie que la localisation est activée et autorisée, puis appuie sur « Suivi » pour réessayer.'},10000);
 })();
 </script>

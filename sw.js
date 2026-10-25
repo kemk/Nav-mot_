@@ -1,7 +1,7 @@
 /* Moto Solo Lite — service worker
  * Réseau d'abord (les mises à jour arrivent tout de suite), cache en secours.
  * Les tuiles de carte, la recherche d'adresse et les itinéraires ne sont jamais mis en cache. */
-const V = 'msl-v8';
+const V = 'msl-v10';
 const SHELL = ['./', 'index.html', 'manifest.webmanifest', 'icon-192.png', 'icon-512.png'];
 const LIBS = ['cdnjs.cloudflare.com', 'fonts.googleapis.com', 'fonts.gstatic.com'];
 
